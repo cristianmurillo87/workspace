@@ -14,7 +14,14 @@ export async function taskWorker() {
 
         if (task) {
             try {
-                await taskRunner.run(task);
+                if (task.taskType !== 'reportGeneration') {
+                     await taskRunner.run(task);
+                } else {
+                    const workflowTasks = task.workflow.tasks.filter( tsk => tsk.taskId !== task.taskId);
+                    const allCompletedOrFailed = workflowTasks.some( tsk => [TaskStatus.Completed, TaskStatus.Failed].includes(tsk.status));
+                    if (allCompletedOrFailed) await taskRunner.run(task);
+                }
+               
 
             } catch (error) {
                 console.error('Task execution failed. Task status has already been updated by TaskRunner.');
