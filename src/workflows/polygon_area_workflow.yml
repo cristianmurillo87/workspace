@@ -1,0 +1,4 @@
+name": "polygon_area_workflow"
+steps:
+  - taskType: "polygonArea"
+    stepNumber: 1
