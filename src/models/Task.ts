@@ -28,8 +28,8 @@ export class Task {
     @Column({ default: 1 })
     stepNumber!: number;
 
-    @Column({nullable: true})
-    output?: string;
+    @Column('text')
+    output!: string | null;
 
     @ManyToOne(() => Workflow, workflow => workflow.tasks)
     workflow!: Workflow;
