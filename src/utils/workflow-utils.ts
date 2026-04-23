@@ -3,7 +3,7 @@ import { TaskStatus } from '../workers/taskRunner';
 
 export function generateReportFromWorflow(workflow: Workflow): Record<string, any> {
 	const taskDetails = [];
-	const taskOutput: any = {};
+	const taskOutput: Record<string, any> = {};
 
 	for (const tsk of workflow.tasks) {
 		taskDetails.push({
