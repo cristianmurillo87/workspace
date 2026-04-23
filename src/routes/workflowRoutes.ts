@@ -6,16 +6,20 @@ import { WorkflowStatus } from '../workflows/WorkflowFactory';
 
 const workflowRouter = Router();
 
+const findWorkflowById = async (workflowId: string) => {
+	const workflowRepository = AppDataSource.manager.getRepository(Workflow);
+	return workflowRepository.findOne({
+		where: {
+			workflowId,
+		},
+		relations: ['tasks'],
+	});
+};
+
 workflowRouter.get('/:id/status', async (req, res) => {
 	const workflowId = req.params.id;
 	try {
-		const workflowRepository = AppDataSource.manager.getRepository(Workflow);
-		const workflow = await workflowRepository.findOne({
-			where: {
-				workflowId,
-			},
-			relations: ['tasks'],
-		});
+		const workflow = await findWorkflowById(workflowId);
 
 		if (!workflow) {
 			res.status(404).json({ message: `Workflow ${workflowId} not found` });
@@ -36,13 +40,7 @@ workflowRouter.get('/:id/status', async (req, res) => {
 workflowRouter.get('/:id/results', async (req, res) => {
 	const workflowId = req.params.id;
 	try {
-		const workflowRepository = AppDataSource.manager.getRepository(Workflow);
-		const workflow = await workflowRepository.findOne({
-			where: {
-				workflowId,
-			},
-			relations: ['tasks'],
-		});
+		const workflow = await findWorkflowById(workflowId);
 
 		if (!workflow) {
 			res.status(404).json({ message: `Workflow ${workflowId} not found` });
