@@ -96,6 +96,22 @@ export class TaskRunner {
                 currentWorkflow.status = WorkflowStatus.InProgress
             }
 
+            if (
+                [WorkflowStatus.Failed, WorkflowStatus.Completed].includes(
+                    currentWorkflow.status
+                )
+            ) {
+                const taskOutputs = currentWorkflow.tasks.map((tsk) => {
+                    return {
+                        taskId: task.taskId,
+                        type: task.taskType,
+                        status: task.status,
+                        output: task.output,
+                    }
+                })
+                currentWorkflow.finalResult = JSON.stringify(taskOutputs)
+            }
+
             await workflowRepository.save(currentWorkflow)
         }
     }
