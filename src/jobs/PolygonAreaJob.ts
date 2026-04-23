@@ -12,11 +12,14 @@ export class PolygonAreaJob implements Job {
         
         const turfFeature: Feature<GeometryObject> = feature(JSON.parse(task.geoJson));
 
-        if (turfFeature.geometry.type === 'Polygon' || turfFeature.geometry.type === 'MultiPolygon') {
-            const areaSqm = area(turfFeature).toFixed(3);
-            console.log(`The area of the given geometry is ${areaSqm} squared meters`);
-            return areaSqm;
-        }
+        try {
+            if (turfFeature.geometry.type === 'Polygon' || turfFeature.geometry.type === 'MultiPolygon') {
+                const areaSqm = area(turfFeature).toFixed(3);
+                console.log(`The area of the given geometry is ${areaSqm} squared meters`);
+                return areaSqm;
+            }
+        } catch {}
+        
         throw new Error('Invalid geometry provided. An area can only be calculated for polygons or multipolygon geometries');
     }
 }
