@@ -1,4 +1,8 @@
-name": "polygon_area_workflow"
+name": 'polygon_area_workflow'
 steps:
-  - taskType: "polygonArea"
-    stepNumber: 1
+    - taskType: 'analysis'
+      stepNumber: 1
+    - taskType: 'polygonArea'
+      stepNumber: 2
+      dependsOn: 1
+

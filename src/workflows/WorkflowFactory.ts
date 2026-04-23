@@ -54,14 +54,14 @@ export class WorkflowFactory {
 		if (!notifiactionStepExists) {
 			workflowSteps.push({
 				taskType: 'notification',
-				stepNumber: workflowSteps.length,
+				stepNumber: workflowSteps.length + 1,
 			});
 		}
 
-		if (reportGenerationStepExists) {
+		if (!reportGenerationStepExists) {
 			workflowSteps.push({
 				taskType: 'reportGeneration',
-				stepNumber: workflowSteps.length,
+				stepNumber: workflowSteps.length + 1,
 			});
 		}
 

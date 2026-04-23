@@ -14,10 +14,11 @@ export class PolygonAreaJob implements Job {
 			if (turfFeature.geometry.type === 'Polygon' || turfFeature.geometry.type === 'MultiPolygon') {
 				const areaSqm = area(turfFeature).toFixed(3);
 				console.log(`The area of the given geometry is ${areaSqm} squared meters`);
-				return areaSqm;
+				return [`Area: ${areaSqm} squared meters`, dependency?.output ?? ''].join(' - ');
 			}
 		} catch {}
 
 		throw new Error('Invalid geometry provided. An area can only be calculated for polygons or multipolygon geometries');
 	}
 }
+

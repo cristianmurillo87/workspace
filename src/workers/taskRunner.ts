@@ -30,12 +30,16 @@ export class TaskRunner {
 		const resultRepository = this.taskRepository.manager.getRepository(Result);
 
 		try {
-			const taskDependency =
-				(await this.taskRepository.findOne({
-					where: {
-						stepNumber: task.dependency,
-					},
-				})) ?? undefined;
+			let taskDependency: Task | undefined = undefined;
+
+			if (task.dependency) {
+				taskDependency =
+					(await this.taskRepository.findOne({
+						where: {
+							stepNumber: task.dependency,
+						},
+					})) ?? undefined;
+			}
 
 			if (task.taskType === 'reportGeneration' || !taskDependency || taskDependency.status === TaskStatus.Completed) {
 				console.log(`Starting job ${task.taskType} for task ${task.taskId}...`);
@@ -64,7 +68,7 @@ export class TaskRunner {
 
 			task.status = TaskStatus.Failed;
 			task.progress = null;
-			task.output = JSON.stringify(error.message ?? error);
+			task.errorMsg = JSON.stringify(error.message ?? error);
 			await this.taskRepository.save(task);
 
 			throw error;
