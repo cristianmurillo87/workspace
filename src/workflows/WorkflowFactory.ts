@@ -15,6 +15,7 @@ export enum WorkflowStatus {
 interface WorkflowStep {
     taskType: string;
     stepNumber: number;
+    dependsOn?: number;
 }
 
 interface WorkflowDefinition {
@@ -51,6 +52,7 @@ export class WorkflowFactory {
             task.status = TaskStatus.Queued;
             task.taskType = step.taskType;
             task.stepNumber = step.stepNumber;
+            task.dependency = step.dependsOn
             task.workflow = savedWorkflow;
             return task;
         });
