@@ -30,18 +30,17 @@ export class TaskRunner {
 		const resultRepository = this.taskRepository.manager.getRepository(Result);
 
 		try {
-			const taskDependency = task.dependency
-				? await this.taskRepository.findOne({
-						where: {
-							stepNumber: task.dependency,
-						},
-					})
-				: null;
+			const taskDependency =
+				(await this.taskRepository.findOne({
+					where: {
+						stepNumber: task.dependency,
+					},
+				})) ?? undefined;
 
 			if (task.taskType === 'reportGeneration' || !taskDependency || taskDependency.status === TaskStatus.Completed) {
 				console.log(`Starting job ${task.taskType} for task ${task.taskId}...`);
 
-				const taskResult = await job.run(task);
+				const taskResult = await job.run(task, taskDependency);
 				console.log(`Job ${task.taskType} for task ${task.taskId} completed successfully.`);
 
 				const result = new Result();

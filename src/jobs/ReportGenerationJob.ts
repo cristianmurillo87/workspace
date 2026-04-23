@@ -6,7 +6,7 @@ import { TaskStatus } from '../workers/taskRunner';
 import { Workflow } from '../models/Workflow';
 
 export class ReportGenerationJob implements Job {
-	async run(task: Task): Promise<Record<string, any>> {
+	async run(task: Task, dependency?: Task): Promise<Record<string, any>> {
 		const workflowRepository = AppDataSource.manager.getRepository(Workflow);
 		const workflow = await workflowRepository.findOne({
 			where: {
