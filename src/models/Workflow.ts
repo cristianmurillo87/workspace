@@ -13,10 +13,10 @@ export class Workflow {
 	@Column({ default: WorkflowStatus.Initial })
 	status!: WorkflowStatus;
 
-	@Column('text')
+	@Column({ nullable: true, type: 'text' })
 	finalResult?: string | null;
 
-	@Column('text')
+	@Column({ nullable: true, type: 'text' })
 	errorMsg?: string | null;
 
 	@OneToMany(() => Task, (task) => task.workflow)
