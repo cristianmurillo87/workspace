@@ -15,10 +15,11 @@ export class DataAnalysisJob implements Job {
 				const isWithin = booleanWithin(inputGeometry, countryFeature as Feature<Polygon>);
 				if (isWithin) {
 					console.log(`The polygon is within ${countryFeature.properties?.name}`);
-					return countryFeature.properties?.name;
+					return `Intersects with: ${countryFeature.properties?.name}`;
 				}
 			}
 		}
 		return 'No country found';
 	}
 }
+

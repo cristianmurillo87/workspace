@@ -31,6 +31,7 @@ export class ReportGenerationJob implements Job {
 				output,
 				type: taskType,
 				status,
+				error: errorMsg,
 			});
 			if (status === TaskStatus.Completed && output) {
 				report[taskType] = output;

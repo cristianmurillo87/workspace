@@ -4,7 +4,7 @@ import { getJobForTaskType } from '../jobs/JobFactory';
 import { WorkflowStatus } from '../workflows/WorkflowFactory';
 import { Workflow } from '../models/Workflow';
 import { Result } from '../models/Result';
-import { generateReportFromWorflow } from '../utils/workflow-utils';
+import { generateReportFromWorkflow } from '../utils/workflow-utils';
 
 export enum TaskStatus {
 	Queued = 'queued',
@@ -49,7 +49,7 @@ export class TaskRunner {
 
 				const result = new Result();
 				result.taskId = task.taskId!;
-				result.data = JSON.stringify(taskResult || {});
+				result.data = JSON.stringify(taskResult) ?? '';
 				await resultRepository.save(result);
 
 				task.resultId = result.resultId!;
@@ -68,7 +68,7 @@ export class TaskRunner {
 
 			task.status = TaskStatus.Failed;
 			task.progress = null;
-			task.errorMsg = JSON.stringify(error.message ?? error);
+			task.errorMsg = error.message ?? error;
 			await this.taskRepository.save(task);
 
 			throw error;
@@ -104,7 +104,7 @@ export class TaskRunner {
 				}
 
 				if (!currentWorkflow.finalResult) {
-					const report = generateReportFromWorflow(currentWorkflow);
+					const report = generateReportFromWorkflow(currentWorkflow);
 					currentWorkflow.finalResult = JSON.stringify(report);
 				}
 			}

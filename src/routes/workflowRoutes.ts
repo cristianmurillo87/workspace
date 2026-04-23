@@ -48,7 +48,7 @@ workflowRouter.get('/:id/results', async (req, res) => {
 			res.status(404).json({ message: `Workflow ${workflowId} not found` });
 		} else if (![WorkflowStatus.Completed, WorkflowStatus.Failed].includes(workflow.status)) {
 			res.status(400).json({
-				message: `Worklow ${workflowId} ${workflow.status === WorkflowStatus.InProgress ? 'is still runnig' : 'has not been started yet.'}`,
+				message: `Workflow ${workflowId} ${workflow.status === WorkflowStatus.InProgress ? 'is still runnig' : 'has not been started yet.'}`,
 			});
 		} else {
 			res.status(200).json(JSON.parse(workflow.finalResult ?? '{}'));

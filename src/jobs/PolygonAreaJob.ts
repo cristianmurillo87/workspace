@@ -14,7 +14,7 @@ export class PolygonAreaJob implements Job {
 			if (turfFeature.geometry.type === 'Polygon' || turfFeature.geometry.type === 'MultiPolygon') {
 				const areaSqm = area(turfFeature).toFixed(3);
 				console.log(`The area of the given geometry is ${areaSqm} squared meters`);
-				return [`Area: ${areaSqm} squared meters`, dependency?.output ?? ''].join(' - ');
+				return [`Area: ${areaSqm} squared meters`, JSON.parse(dependency?.output ?? '')].join(' - ');
 			}
 		} catch {}
 

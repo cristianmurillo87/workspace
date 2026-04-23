@@ -1,7 +1,7 @@
 import { Workflow } from '../models/Workflow';
 import { TaskStatus } from '../workers/taskRunner';
 
-export function generateReportFromWorflow(workflow: Workflow): Record<string, any> {
+export function generateReportFromWorkflow(workflow: Workflow): Record<string, any> {
 	const taskDetails = [];
 	const taskOutput: Record<string, any> = {};
 
