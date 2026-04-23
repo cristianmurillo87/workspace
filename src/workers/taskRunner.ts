@@ -4,6 +4,7 @@ import { getJobForTaskType } from '../jobs/JobFactory';
 import { WorkflowStatus } from '../workflows/WorkflowFactory';
 import { Workflow } from '../models/Workflow';
 import { Result } from '../models/Result';
+import { generateReportFromWorflow } from '../utils/workflow-utils';
 
 export enum TaskStatus {
 	Queued = 'queued',
@@ -50,13 +51,13 @@ export class TaskRunner {
 
 				task.resultId = result.resultId!;
 				task.status = TaskStatus.Completed;
-				task.output = result.data;
+				task.output = JSON.stringify(taskResult);
 				task.progress = null;
 				await this.taskRepository.save(task);
 			} else if ([TaskStatus.Failed, TaskStatus.Skipped].includes(taskDependency?.status)) {
 				task.status = TaskStatus.Skipped;
 				task.progress = null;
-				task.errorMsg = `Task not executed since a dependencz either failed or was skipped.`;
+				task.errorMsg = `Task not executed since a dependency either failed or was skipped.`;
 				await this.taskRepository.save(task);
 			}
 		} catch (error: any) {
@@ -64,7 +65,7 @@ export class TaskRunner {
 
 			task.status = TaskStatus.Failed;
 			task.progress = null;
-			task.output = error.message ?? error;
+			task.output = JSON.stringify(error.message ?? error);
 			await this.taskRepository.save(task);
 
 			throw error;
@@ -92,31 +93,17 @@ export class TaskRunner {
 				[TaskStatus.Completed, TaskStatus.Failed, TaskStatus.Skipped].includes(t.status),
 			);
 			if (workflowCompleted) {
-				const taskDetails = [];
-				const taskOutput: any = {};
-
-				for (const tsk of currentWorkflow.tasks) {
-					taskDetails.push({
-						taskId: task.taskId,
-						type: task.taskType,
-						status: task.status,
-						output: task.output,
-						errorMsg: task.errorMsg,
-					});
-
-					if (tsk.status === TaskStatus.Completed && task.taskType !== 'reportGeneration') {
-						taskOutput[task.taskType] = task.output;
-					}
+				const reportGenerationTask = currentWorkflow.tasks.find((t) => t.taskType === 'reportGeneration');
+				if (reportGenerationTask?.output) {
+					const result = JSON.parse(reportGenerationTask.output);
+					result.status = currentWorkflow.status;
+					currentWorkflow.finalResult = JSON.stringify(result);
 				}
 
-				const result = {
-					workflow: currentWorkflow.workflowId,
-					status: currentWorkflow.status,
-					error: currentWorkflow.tasks.find((t) => t.status === TaskStatus.Failed)?.errorMsg,
-					output: taskOutput,
-					tasks: taskDetails,
-				};
-				currentWorkflow.finalResult = JSON.stringify(result);
+				if (!currentWorkflow.finalResult) {
+					const report = generateReportFromWorflow(currentWorkflow);
+					currentWorkflow.finalResult = JSON.stringify(report);
+				}
 			}
 
 			await workflowRepository.save(currentWorkflow);
