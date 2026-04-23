@@ -1,118 +1,126 @@
-import { Repository } from 'typeorm'
-import { Task } from '../models/Task'
-import { getJobForTaskType } from '../jobs/JobFactory'
-import { WorkflowStatus } from '../workflows/WorkflowFactory'
-import { Workflow } from '../models/Workflow'
-import { Result } from '../models/Result'
+import { Repository } from 'typeorm';
+import { Task } from '../models/Task';
+import { getJobForTaskType } from '../jobs/JobFactory';
+import { WorkflowStatus } from '../workflows/WorkflowFactory';
+import { Workflow } from '../models/Workflow';
+import { Result } from '../models/Result';
 
 export enum TaskStatus {
-    Queued = 'queued',
-    InProgress = 'in_progress',
-    Completed = 'completed',
-    Failed = 'failed',
+	Queued = 'queued',
+	InProgress = 'in_progress',
+	Completed = 'completed',
+	Failed = 'failed',
+	Skipped = 'skipped',
 }
 
 export class TaskRunner {
-    constructor(private taskRepository: Repository<Task>) {}
+	constructor(private taskRepository: Repository<Task>) {}
 
-    /**
-     * Runs the appropriate job based on the task's type, managing the task's status.
-     * @param task - The task entity that determines which job to run.
-     * @throws If the job fails, it rethrows the error.
-     */
-    async run(task: Task): Promise<void> {
-        task.status = TaskStatus.InProgress
-        task.progress = 'starting job...'
-        await this.taskRepository.save(task)
-        const job = getJobForTaskType(task.taskType)
+	/**
+	 * Runs the appropriate job based on the task's type, managing the task's status.
+	 * @param task - The task entity that determines which job to run.
+	 * @throws If the job fails, it rethrows the error.
+	 */
+	async run(task: Task): Promise<void> {
+		task.status = TaskStatus.InProgress;
+		task.progress = 'starting job...';
+		await this.taskRepository.save(task);
+		const job = getJobForTaskType(task.taskType);
+		const resultRepository = this.taskRepository.manager.getRepository(Result);
 
-        try {
-            const taskDependency = task.dependency
-                ? await this.taskRepository.findOne({
-                      where: {
-                          stepNumber: task.dependency,
-                      },
-                  })
-                : null
+		try {
+			const taskDependency = task.dependency
+				? await this.taskRepository.findOne({
+						where: {
+							stepNumber: task.dependency,
+						},
+					})
+				: null;
 
-            if (
-                task.taskType === 'reportGeneration' ||
-                !taskDependency ||
-                taskDependency.status === TaskStatus.Completed
-            ) {
-                console.log(
-                    `Starting job ${task.taskType} for task ${task.taskId}...`
-                )
-                const resultRepository =
-                    this.taskRepository.manager.getRepository(Result)
-                const taskResult = await job.run(task)
-                console.log(
-                    `Job ${task.taskType} for task ${task.taskId} completed successfully.`
-                )
-                const result = new Result()
-                result.taskId = task.taskId!
-                result.data = JSON.stringify(taskResult || {})
-                await resultRepository.save(result)
-                task.resultId = result.resultId!
-                task.status = TaskStatus.Completed
-                task.output = result.data
-                task.progress = null
-                await this.taskRepository.save(task)
-            }
-        } catch (error: any) {
-            console.error(
-                `Error running job ${task.taskType} for task ${task.taskId}:`,
-                error
-            )
+			if (task.taskType === 'reportGeneration' || !taskDependency || taskDependency.status === TaskStatus.Completed) {
+				console.log(`Starting job ${task.taskType} for task ${task.taskId}...`);
 
-            task.status = TaskStatus.Failed
-            task.progress = null
-            task.output = error.message ?? error
-            await this.taskRepository.save(task)
+				const taskResult = await job.run(task);
+				console.log(`Job ${task.taskType} for task ${task.taskId} completed successfully.`);
 
-            throw error
-        }
+				const result = new Result();
+				result.taskId = task.taskId!;
+				result.data = JSON.stringify(taskResult || {});
+				await resultRepository.save(result);
 
-        const workflowRepository =
-            this.taskRepository.manager.getRepository(Workflow)
-        const currentWorkflow = await workflowRepository.findOne({
-            where: { workflowId: task.workflow.workflowId },
-            relations: ['tasks'],
-        })
+				task.resultId = result.resultId!;
+				task.status = TaskStatus.Completed;
+				task.output = result.data;
+				task.progress = null;
+				await this.taskRepository.save(task);
+			} else if ([TaskStatus.Failed, TaskStatus.Skipped].includes(taskDependency?.status)) {
+				task.status = TaskStatus.Skipped;
+				task.progress = null;
+				task.errorMsg = `Task not executed since a dependencz either failed or was skipped.`;
+				await this.taskRepository.save(task);
+			}
+		} catch (error: any) {
+			console.error(`Error running job ${task.taskType} for task ${task.taskId}:`, error);
 
-        if (currentWorkflow) {
-            const allCompleted = currentWorkflow.tasks.every(
-                (t) => t.status === TaskStatus.Completed
-            )
-            const anyFailed = currentWorkflow.tasks.some(
-                (t) => t.status === TaskStatus.Failed
-            )
+			task.status = TaskStatus.Failed;
+			task.progress = null;
+			task.output = error.message ?? error;
+			await this.taskRepository.save(task);
 
-            if (anyFailed) {
-                currentWorkflow.status = WorkflowStatus.Failed
-            } else if (allCompleted) {
-                currentWorkflow.status = WorkflowStatus.Completed
-            } else {
-                currentWorkflow.status = WorkflowStatus.InProgress
-            }
+			throw error;
+		}
 
-            if (
-                [WorkflowStatus.Failed, WorkflowStatus.Completed].includes(
-                    currentWorkflow.status
-                )
-            ) {
-                const taskOutputs = currentWorkflow.tasks.map((tsk) => {
-                    return {
-                        taskId: task.taskId,
-                        type: task.taskType,
-                        status: task.status,
-                        output: task.output,
-                    }
-                })
-                currentWorkflow.finalResult = JSON.stringify(taskOutputs)
-            }
+		const workflowRepository = this.taskRepository.manager.getRepository(Workflow);
+		const currentWorkflow = await workflowRepository.findOne({
+			where: { workflowId: task.workflow.workflowId },
+			relations: ['tasks'],
+		});
 
-            await workflowRepository.save(currentWorkflow)
-        }
-    }
+		if (currentWorkflow) {
+			const allCompleted = currentWorkflow.tasks.every((t) => t.status === TaskStatus.Completed);
+			const anyFailed = currentWorkflow.tasks.some((t) => t.status === TaskStatus.Failed);
+
+			if (anyFailed) {
+				currentWorkflow.status = WorkflowStatus.Failed;
+			} else if (allCompleted) {
+				currentWorkflow.status = WorkflowStatus.Completed;
+			} else {
+				currentWorkflow.status = WorkflowStatus.InProgress;
+			}
+
+			const workflowCompleted = currentWorkflow.tasks.every((t) =>
+				[TaskStatus.Completed, TaskStatus.Failed, TaskStatus.Skipped].includes(t.status),
+			);
+			if (workflowCompleted) {
+				const taskDetails = [];
+				const taskOutput: any = {};
+
+				for (const tsk of currentWorkflow.tasks) {
+					taskDetails.push({
+						taskId: task.taskId,
+						type: task.taskType,
+						status: task.status,
+						output: task.output,
+						errorMsg: task.errorMsg,
+					});
+
+					if (tsk.status === TaskStatus.Completed && task.taskType !== 'reportGeneration') {
+						taskOutput[task.taskType] = task.output;
+					}
+				}
+
+				const result = {
+					workflow: currentWorkflow.workflowId,
+					status: currentWorkflow.status,
+					error: currentWorkflow.tasks.find((t) => t.status === TaskStatus.Failed)?.errorMsg,
+					output: taskOutput,
+					tasks: taskDetails,
+				};
+				currentWorkflow.finalResult = JSON.stringify(result);
+			}
+
+			await workflowRepository.save(currentWorkflow);
+		}
+	}
 }
+
